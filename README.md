@@ -8,11 +8,11 @@ A command line tool for Linux. Downloads and updates the same files as IslandRum
    libssl-dev
    libxml2-dev
 
-2) Place etoh-downloader.c and Makefile in the target directory.
+2) Edit manifest URL in etoh-downloader.c, if necessary.
 
-3) Edit manifest URL in etoh-downloader.c, if necessary.
+3) Compile with make
 
-4) Compile with make
+4) Place etoh-downloader in the target directory.
 
 5) Do not run as root. Download or update files with ./etoh-downloader
 
