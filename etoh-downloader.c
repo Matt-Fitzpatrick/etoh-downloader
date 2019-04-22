@@ -286,7 +286,7 @@ int main(int argc, char **argv) {
 
     xmlBufferFree(xml_buffer);
 
-    printf("%s %s", xmlGetProp(file_node, (xmlChar *)"exec"), xmlGetProp(file_node, (xmlChar *)"params"));
+    printf("%s %s\n", xmlGetProp(file_node, (xmlChar *)"exec"), xmlGetProp(file_node, (xmlChar *)"params"));
   }
 
   xmlXPathFreeObject(files_object);
