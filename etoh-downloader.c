@@ -14,12 +14,31 @@
 #include <libxml/xpath.h>
 #include <openssl/md5.h>
 
+int md5_from_file(char *hash, FILE *handle);
 int create_directories(char *path);
 int update_file(xmlNodePtr node);
 int check_file(xmlNodePtr node);
 int main(int argc, char **argv);
 
 xmlXPathContextPtr xpath_context;
+
+int md5_from_file(char *hash, FILE *handle) {
+  MD5_CTX md5_context;
+  unsigned char data_buffer[16384];
+  int bytes_read;
+  unsigned char digest[MD5_DIGEST_LENGTH];
+
+  MD5_Init(&md5_context);
+  while((bytes_read = fread(data_buffer, 1, 16384, handle)) != 0)
+    MD5_Update(&md5_context, data_buffer, bytes_read);
+  MD5_Final(digest, &md5_context);
+
+  sprintf(hash, "%02x", digest[0]);
+  for(int i = 1; i < MD5_DIGEST_LENGTH; i++)
+    sprintf(hash, "%s%02x", hash, digest[i]);
+
+  return 0;
+}
 
 int create_directories(char *path) {
   char buffer[100];
@@ -149,13 +168,9 @@ int update_file(xmlNodePtr node) {
 
 int check_file(xmlNodePtr node) {
   char buffer[100];
-  char hash_buffer[100];
+  char hash[100];
   FILE *file_handle;
   long file_size;
-  unsigned char digest[MD5_DIGEST_LENGTH];
-  MD5_CTX md5_context;
-  unsigned char data_buffer[1024];
-  int bytes_read;
 
   sprintf(buffer, "%s", xmlGetProp(node, (xmlChar *)"name"));
 
@@ -174,18 +189,11 @@ int check_file(xmlNodePtr node) {
 
   file_handle = fopen(buffer, "rb");
 
-  MD5_Init(&md5_context);
-  while((bytes_read = fread(data_buffer, 1, 1024, file_handle)) != 0)
-    MD5_Update(&md5_context, data_buffer, bytes_read);
-  MD5_Final(digest, &md5_context);
+  md5_from_file(hash, file_handle);
 
   fclose(file_handle);
 
-  sprintf(hash_buffer, "%02x", digest[0]);
-  for(int i = 1; i < MD5_DIGEST_LENGTH; i++)
-    sprintf(hash_buffer, "%s%02x", hash_buffer, digest[i]);
-
-  if(strcmp(hash_buffer, (char *)xmlGetProp(node, (xmlChar *)"md5"))) {
+  if(strcmp(hash, (char *)xmlGetProp(node, (xmlChar *)"md5"))) {
     return 1;
   }
 
@@ -202,7 +210,9 @@ int main(int argc, char **argv) {
   xmlNodePtr file_node;
   xmlBufferPtr xml_buffer;
   char buffer[100];
+  char old_hash[100];
   int apps_number;
+  int check_files;
 
   srand(time(0));
 
@@ -210,6 +220,16 @@ int main(int argc, char **argv) {
   if(!curl) {
     return 1;
   }
+
+  check_files = FALSE;
+  manifest_handle = fopen(MANIFEST_FILENAME, "rb");
+
+  if(manifest_handle) {
+    md5_from_file(old_hash, manifest_handle);
+    fclose(manifest_handle);
+  }
+  else
+    check_files = TRUE;
 
   manifest_handle = fopen(MANIFEST_FILENAME, "wb");
 
@@ -235,9 +255,22 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  curl_easy_cleanup(curl);
+
   fclose(manifest_handle);
 
-  curl_easy_cleanup(curl);
+  manifest_handle = fopen(MANIFEST_FILENAME, "rb");
+
+  if(!manifest_handle) {
+    check_files = TRUE;
+  }
+  else if(!check_files) {
+    md5_from_file(buffer, manifest_handle);
+    if(strcmp(old_hash, buffer))
+      check_files = TRUE;
+  }
+
+  fclose(manifest_handle);
 
   manifest = xmlParseFile(MANIFEST_FILENAME);
 
@@ -248,28 +281,35 @@ int main(int argc, char **argv) {
 
   xpath_context = xmlXPathNewContext(manifest);
 
-  files_object = xmlXPathEvalExpression((xmlChar *)"/manifest/filelist/file", xpath_context);
+  if(check_files) {
+    files_object = xmlXPathEvalExpression((xmlChar *)"/manifest/filelist/file", xpath_context);
 
-  printf("Checking %d local files ...\n", files_object->nodesetval->nodeNr);
+    printf("Checking %d local files ...\n", files_object->nodesetval->nodeNr);
 
-  for(int i = 1; i <= files_object->nodesetval->nodeNr; i++) {
-    sprintf(buffer, "/manifest/filelist/file[%d]", i);
-    file_node = xmlXPathEvalExpression((xmlChar *)buffer, xpath_context)->nodesetval->nodeTab[0];
+    for(int i = 1; i <= files_object->nodesetval->nodeNr; i++) {
+      sprintf(buffer, "/manifest/filelist/file[%d]", i);
+      file_node = xmlXPathEvalExpression((xmlChar *)buffer, xpath_context)->nodesetval->nodeTab[0];
 
-    sprintf(buffer, "%s", xmlGetProp(file_node, (xmlChar *)"name"));
+      sprintf(buffer, "%s", xmlGetProp(file_node, (xmlChar *)"name"));
 
-    if(buffer[0] == '/' || buffer[0] == '~' || strstr(buffer, "..")) {
-      fprintf(stderr, "Path not allowed: %s\n", buffer);
-      return 1;
+      if(buffer[0] == '/' || buffer[0] == '~' || strstr(buffer, "..")) {
+        fprintf(stderr, "Path not allowed: %s\n", buffer);
+        return 1;
+      }
+
+      if(!check_file(file_node)) {
+        printf("%s is up to date.\n", buffer);
+        continue;
+      }
+
+      if(update_file(file_node))
+        return 1;
     }
 
-    if(!check_file(file_node)) {
-      printf("%s is up to date.\n", buffer);
-      continue;
-    }
-
-    if(update_file(file_node))
-      return 1;
+    xmlXPathFreeObject(files_object);
+  }
+  else {
+      printf("Manifest is up to date.\n");
   }
 
   apps_object = xmlXPathEvalExpression((xmlChar *)"/manifest/profiles/launch", xpath_context);
@@ -289,7 +329,6 @@ int main(int argc, char **argv) {
     printf("%s %s\n", xmlGetProp(file_node, (xmlChar *)"exec"), xmlGetProp(file_node, (xmlChar *)"params"));
   }
 
-  xmlXPathFreeObject(files_object);
   xmlXPathFreeObject(apps_object);
   xmlXPathFreeContext(xpath_context);
   xmlFreeDoc(manifest);
