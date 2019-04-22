@@ -231,7 +231,7 @@ int main(int argc, char **argv) {
   else
     check_files = TRUE;
 
-  manifest_handle = fopen(MANIFEST_FILENAME, "wb");
+  manifest_handle = fopen(MANIFEST_FILENAME ".new", "wb");
 
   if(!manifest_handle) {
     return 1;
@@ -252,6 +252,7 @@ int main(int argc, char **argv) {
 
   if(res != CURLE_OK) {
     fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+    remove(MANIFEST_FILENAME ".new");
     return 1;
   }
 
@@ -259,7 +260,7 @@ int main(int argc, char **argv) {
 
   fclose(manifest_handle);
 
-  manifest_handle = fopen(MANIFEST_FILENAME, "rb");
+  manifest_handle = fopen(MANIFEST_FILENAME ".new", "rb");
 
   if(!manifest_handle) {
     check_files = TRUE;
@@ -272,10 +273,11 @@ int main(int argc, char **argv) {
 
   fclose(manifest_handle);
 
-  manifest = xmlParseFile(MANIFEST_FILENAME);
+  manifest = xmlParseFile(MANIFEST_FILENAME ".new");
 
   if(!manifest) {
-    fprintf(stderr, "xmlReadFile() failed to parse " MANIFEST_FILENAME "\n");
+    fprintf(stderr, "xmlReadFile() failed to parse " MANIFEST_FILENAME ".new\n");
+    remove(MANIFEST_FILENAME ".new");
     return 1;
   }
 
@@ -294,6 +296,7 @@ int main(int argc, char **argv) {
 
       if(buffer[0] == '/' || buffer[0] == '~' || strstr(buffer, "..")) {
         fprintf(stderr, "Path not allowed: %s\n", buffer);
+        remove(MANIFEST_FILENAME ".new");
         return 1;
       }
 
@@ -302,14 +305,20 @@ int main(int argc, char **argv) {
         continue;
       }
 
-      if(update_file(file_node))
+      if(update_file(file_node)) {
+        remove(MANIFEST_FILENAME ".new");
         return 1;
+      }
     }
 
     xmlXPathFreeObject(files_object);
+
+    rename(MANIFEST_FILENAME ".new", MANIFEST_FILENAME);
   }
   else {
-      printf("Manifest is up to date.\n");
+    printf("Manifest is up to date.\n");
+
+    remove(MANIFEST_FILENAME ".new");
   }
 
   apps_object = xmlXPathEvalExpression((xmlChar *)"/manifest/profiles/launch", xpath_context);
@@ -332,5 +341,6 @@ int main(int argc, char **argv) {
   xmlXPathFreeObject(apps_object);
   xmlXPathFreeContext(xpath_context);
   xmlFreeDoc(manifest);
+  remove(MANIFEST_FILENAME ".new");
   return 0;
 }
