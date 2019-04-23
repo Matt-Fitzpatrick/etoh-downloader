@@ -12,7 +12,7 @@ A command line tool for Linux. Downloads and updates the same files as IslandRum
 
 3) Compile with make
 
-4) Create the target directory if needed, e.g. mkdir ~/.wine/drive_c/Program\ Files\ \(x86\\)/***
+4) Create the target directory if needed, e.g. mkdir ~/.wine/drive_c/Program\ Files\ \\(x86\\)/***
 
 5) Place etoh-downloader in the target directory.
 
