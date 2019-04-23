@@ -325,7 +325,7 @@ int main(int argc, char **argv) {
   apps_number = apps_object->nodesetval->nodeNr;
   printf("%d applications found.\n", apps_number);
   for(int i = 1; i <= apps_number; i++) {
-    sprintf(buffer, "/manifest/profiles/launch[@order='%d']", i - 1);
+    sprintf(buffer, "/manifest/profiles/launch[%d]", i);
     file_node = xmlXPathEvalExpression((xmlChar *)buffer, xpath_context)->nodesetval->nodeTab[0];
 
     xml_buffer = xmlBufferCreate();
