@@ -1,21 +1,46 @@
 # etoh-downloader
 
-A command line tool for Linux. Downloads and updates the same files as IslandRum (Mac) and Tequila (Windows). Supports SCORE, Paragon Chat, Titan Icon, and future compatible applications.
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-1) Check dependencies:
+A command line tool for Linux for comparing a directory to a `manifest.xml` file and updating the files as needed- Does the same method as [Tequila](https://github.com/leandrotlz/Tequila) for Windows.
 
-   libcurl4-openssl-dev (or libcurl4-gnutls-dev, libcurl4-nss-dev, etc.)
-   libssl-dev
-   libxml2-dev
+## Compiling
 
-2) Edit manifest URL in etoh-downloader.c, if necessary.
+### Requirements
 
-3) Compile with make
+- `make`
+- `gcc`
 
-4) Create the target directory if needed, e.g. mkdir ~/.wine/drive_c/Program\ Files\ \\(x86\\)/***
+#### Ubuntu/Debian Packages
 
-5) Place etoh-downloader in the target directory.
+- `libcurl4-openssl-dev` (or libcurl4-gnutls-dev, libcurl4-nss-dev, etc.)
+- `libssl-dev`
+- `libxml2-dev`
 
-6) Do not run as root. Download or update files with ./etoh-downloader
+#### Fedora Packages
 
-7) Force a re-check of files with rm manifest.xml; ./etoh-downloader
+- `libcurl-devel`
+- `openssl-devel`
+- `libxml2-devel`
+
+Compile with `make` and `etoh-downloader` will be ready.
+
+### Troubleshooting
+
+If you get an error like: `fatal error: libxml/tree.h: No such file or directory` you may need to make a symlink on your system to the right files. You can do this via the following command:
+
+`sudo ln -s /usr/include/libxml2/libxml /usr/include/libxml`
+
+## Usage
+
+1. Create the target directory if needed, e.g. `mkdir ~/.wine/drive_c/Program\ Files\ \(x86\)/***`
+
+2. Place `etoh-downloader` in the target directory. `etoh-downloader` runs in the directory it exists in so make sure that's where you want the files to go.
+
+3. Do not run as root. Download or update files with `./etoh-downloader <manifest_url> [manifest_filename]`
+   - `manifest_url` is required and is the URL to the manifest file you're using
+   - `manifest_filename` is optional and is what you'd like to call the file on your machine; defaults to `manifest.xml`
+
+### Re-Check
+
+Force a re-check of files by deleting the manifest file and running the command again.
