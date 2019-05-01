@@ -1,6 +1,4 @@
 /* Edit these strings to get manifest from a different URL */
-#define MANIFEST_BASEURL "https://patch.savecoh.com/"
-#define MANIFEST_FILENAME "manifest.xml"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -13,6 +11,13 @@
 #include <libxml/tree.h>
 #include <libxml/xpath.h>
 #include <openssl/md5.h>
+
+#ifndef TRUE
+#define TRUE 1
+#endif
+#ifndef FALSE
+#define FALSE 0
+#endif
 
 int md5_from_file(char *hash, FILE *handle);
 int create_directories(char *path);
@@ -201,6 +206,27 @@ int check_file(xmlNodePtr node) {
 }
 
 int main(int argc, char **argv) {
+
+  if(argc < 2) {
+    printf("Please provide a manifest URL as the first argument.\n");
+    return 1;
+  }
+
+  char *manifest_url = argv[1];
+  char *manifest_filename;
+
+  if(argc > 2)
+    manifest_filename = argv[2];
+  else
+    manifest_filename = "manifest.xml";
+
+  char *manifest_new_filename;
+
+  manifest_new_filename = malloc(strlen(manifest_filename) + 4);
+
+  manifest_new_filename = strcpy(manifest_new_filename, manifest_filename);
+  manifest_new_filename = strcat(manifest_new_filename, ".new");
+
   CURL *curl;
   CURLcode res;
   FILE *manifest_handle;
@@ -222,7 +248,7 @@ int main(int argc, char **argv) {
   }
 
   check_files = FALSE;
-  manifest_handle = fopen(MANIFEST_FILENAME, "rb");
+  manifest_handle = fopen(manifest_filename, "rb");
 
   if(manifest_handle) {
     md5_from_file(old_hash, manifest_handle);
@@ -231,14 +257,14 @@ int main(int argc, char **argv) {
   else
     check_files = TRUE;
 
-  manifest_handle = fopen(MANIFEST_FILENAME ".new", "wb");
+  manifest_handle = fopen(manifest_new_filename, "wb");
 
   if(!manifest_handle) {
     return 1;
   }
 
-  printf("Getting " MANIFEST_BASEURL MANIFEST_FILENAME " ...\n");
-  curl_easy_setopt(curl, CURLOPT_URL, MANIFEST_BASEURL MANIFEST_FILENAME);
+  printf("Getting %s ...\n", manifest_url);
+  curl_easy_setopt(curl, CURLOPT_URL, manifest_url);
   curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
   curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, TRUE);
   curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 30L);
@@ -252,7 +278,7 @@ int main(int argc, char **argv) {
 
   if(res != CURLE_OK) {
     fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
-    remove(MANIFEST_FILENAME ".new");
+    remove(manifest_new_filename);
     return 1;
   }
 
@@ -260,7 +286,7 @@ int main(int argc, char **argv) {
 
   fclose(manifest_handle);
 
-  manifest_handle = fopen(MANIFEST_FILENAME ".new", "rb");
+  manifest_handle = fopen(manifest_new_filename, "rb");
 
   if(!manifest_handle) {
     check_files = TRUE;
@@ -273,11 +299,11 @@ int main(int argc, char **argv) {
 
   fclose(manifest_handle);
 
-  manifest = xmlParseFile(MANIFEST_FILENAME ".new");
+  manifest = xmlParseFile(manifest_new_filename);
 
   if(!manifest) {
-    fprintf(stderr, "xmlReadFile() failed to parse " MANIFEST_FILENAME ".new\n");
-    remove(MANIFEST_FILENAME ".new");
+    fprintf(stderr, "xmlReadFile() failed to parse %s\n", manifest_new_filename);
+    remove(manifest_new_filename);
     return 1;
   }
 
@@ -296,7 +322,7 @@ int main(int argc, char **argv) {
 
       if(buffer[0] == '/' || buffer[0] == '~' || strstr(buffer, "..")) {
         fprintf(stderr, "Path not allowed: %s\n", buffer);
-        remove(MANIFEST_FILENAME ".new");
+        remove(manifest_new_filename);
         return 1;
       }
 
@@ -306,19 +332,19 @@ int main(int argc, char **argv) {
       }
 
       if(update_file(file_node)) {
-        remove(MANIFEST_FILENAME ".new");
+        remove(manifest_new_filename);
         return 1;
       }
     }
 
     xmlXPathFreeObject(files_object);
 
-    rename(MANIFEST_FILENAME ".new", MANIFEST_FILENAME);
+    rename(manifest_new_filename, manifest_filename);
   }
   else {
     printf("Manifest is up to date.\n");
 
-    remove(MANIFEST_FILENAME ".new");
+    remove(manifest_new_filename);
   }
 
   apps_object = xmlXPathEvalExpression((xmlChar *)"/manifest/profiles/launch", xpath_context);
@@ -341,6 +367,8 @@ int main(int argc, char **argv) {
   xmlXPathFreeObject(apps_object);
   xmlXPathFreeContext(xpath_context);
   xmlFreeDoc(manifest);
-  remove(MANIFEST_FILENAME ".new");
+  remove(manifest_new_filename);
+
+  free(manifest_new_filename);
   return 0;
 }
