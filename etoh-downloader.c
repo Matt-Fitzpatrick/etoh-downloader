@@ -1,4 +1,7 @@
-/* Edit these strings to get manifest from a different URL */
+/* Uncomment the following line to hardcode a default manifest URL */
+// #define DEFAULT_MANIFEST_URL "https://example.tld/manifest.xml"
+
+#define DEFAULT_MANIFEST_FILENAME "manifest.xml"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -161,10 +164,12 @@ int update_file(xmlNodePtr node) {
       fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
       return 1;
     }
-    else if(!check_file(node))
-      return 0;
-    else
+    else if(check_file(node)) {
       printf("\nChecksum failed. Trying another server ...\n");
+      continue;
+    }
+    else
+      return 0;
   }
 
   fprintf(stderr, "No more servers available.\nDownload failed: %s\n", buffer);
@@ -207,26 +212,9 @@ int check_file(xmlNodePtr node) {
 
 int main(int argc, char **argv) {
 
-  if(argc < 2) {
-    printf("Please provide a manifest URL as the first argument.\n");
-    return 1;
-  }
-
-  char *manifest_url = argv[1];
+  char *manifest_url;
   char *manifest_filename;
-
-  if(argc > 2)
-    manifest_filename = argv[2];
-  else
-    manifest_filename = "manifest.xml";
-
   char *manifest_new_filename;
-
-  manifest_new_filename = malloc(strlen(manifest_filename) + 4);
-
-  manifest_new_filename = strcpy(manifest_new_filename, manifest_filename);
-  manifest_new_filename = strcat(manifest_new_filename, ".new");
-
   CURL *curl;
   CURLcode res;
   FILE *manifest_handle;
@@ -239,6 +227,27 @@ int main(int argc, char **argv) {
   char old_hash[100];
   int apps_number;
   int check_files;
+
+  if(argc > 1)
+    manifest_url = argv[1];
+  else {
+#ifdef DEFAULT_MANIFEST_URL
+    manifest_url = DEFAULT_MANIFEST_URL;
+#else
+    printf("Please provide a manifest URL as the first argument.\n");
+    return 1;
+#endif
+  }
+
+  if(argc > 2)
+    manifest_filename = argv[2];
+  else
+    manifest_filename = DEFAULT_MANIFEST_FILENAME;
+
+  manifest_new_filename = malloc(strlen(manifest_filename) + 4);
+
+  manifest_new_filename = strcpy(manifest_new_filename, manifest_filename);
+  manifest_new_filename = strcat(manifest_new_filename, ".new");
 
   srand(time(0));
 
