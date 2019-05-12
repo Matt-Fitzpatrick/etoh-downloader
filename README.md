@@ -25,12 +25,6 @@ A command line tool for Linux for comparing a directory to a `manifest.xml` file
 
 Compile with `make` and `etoh-downloader` will be ready.
 
-### Troubleshooting
-
-If you get an error like: `fatal error: libxml/tree.h: No such file or directory` you may need to make a symlink on your system to the right files. You can do this via the following command:
-
-`sudo ln -s /usr/include/libxml2/libxml /usr/include/libxml`
-
 ## Usage
 
 1. Create the target directory if needed, e.g. `mkdir ~/.wine/drive_c/Program\ Files\ \(x86\)/***`
