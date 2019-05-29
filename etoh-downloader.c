@@ -203,12 +203,7 @@ int check_file(xmlNodePtr node) {
 
   fclose(file_handle);
 
-  strcpy(buffer, (char *)xmlGetProp(node, (xmlChar *)"md5"));
-
-  for(int i = 0; i < 32; i++)
-    buffer[i] = tolower(buffer[i]);
-
-  if(strcmp(hash, buffer)) {
+  if(strcmpi(hash, (char *)xmlGetProp(node, (xmlChar *)"md5"))) {
     return 1;
   }
 
