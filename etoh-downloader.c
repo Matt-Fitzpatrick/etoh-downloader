@@ -203,7 +203,7 @@ int check_file(xmlNodePtr node) {
 
   fclose(file_handle);
 
-  if(strcmpi(hash, (char *)xmlGetProp(node, (xmlChar *)"md5"))) {
+  if(strcasecmp(hash, (char *)xmlGetProp(node, (xmlChar *)"md5"))) {
     return 1;
   }
 
