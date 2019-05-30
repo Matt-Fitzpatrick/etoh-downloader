@@ -33,7 +33,7 @@ Compile with `make` and `etoh-downloader` will be ready.
 
 3. Do not run as root. Download or update files with `./etoh-downloader <manifest_url> [manifest_filename]`
    - `manifest_url` is required and is the URL to the manifest file you're using
-   - `manifest_filename` is optional and is what you'd like to call the file on your machine; defaults to `manifest.xml`
+   - `manifest_filename` is optional and is what you'd like to call the file on your machine; defaults to the remote manifest's filename
 
 ### Re-Check
 
