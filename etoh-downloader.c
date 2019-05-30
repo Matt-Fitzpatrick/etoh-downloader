@@ -1,9 +1,10 @@
 /* Uncomment the following line to hardcode a default manifest URL */
 // #define DEFAULT_MANIFEST_URL "https://example.tld/manifest.xml"
 
-#define DEFAULT_MANIFEST_FILENAME "manifest.xml"
+#define FALLBACK_MANIFEST_FILENAME "manifest.xml"
 
 #include <ctype.h>
+#include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -241,13 +242,16 @@ int main(int argc, char **argv) {
 
   if(argc > 2)
     manifest_filename = argv[2];
-  else
-    manifest_filename = DEFAULT_MANIFEST_FILENAME;
+  else {
+    manifest_filename = basename(manifest_url);
+    if(!manifest_filename || !manifest_filename[0] || manifest_filename[0] == '/' || manifest_filename[0] == '.')
+      manifest_filename = FALLBACK_MANIFEST_FILENAME;
+  }
 
-  manifest_new_filename = malloc(strlen(manifest_filename) + 4);
+  manifest_new_filename = malloc(strlen(manifest_filename) + 5);
 
-  manifest_new_filename = strcpy(manifest_new_filename, manifest_filename);
-  manifest_new_filename = strcat(manifest_new_filename, ".new");
+  strcpy(manifest_new_filename, manifest_filename);
+  strcat(manifest_new_filename, ".new");
 
   srand(time(0));
 
@@ -349,9 +353,10 @@ int main(int argc, char **argv) {
     xmlXPathFreeObject(files_object);
 
     rename(manifest_new_filename, manifest_filename);
+    printf("%s saved.\n", manifest_filename);
   }
   else {
-    printf("Manifest is up to date.\n");
+    printf("%s is up to date.\n", manifest_filename);
 
     remove(manifest_new_filename);
   }
