@@ -161,6 +161,10 @@ int update_file(xmlNodePtr node) {
       printf("Partial file detected. Trying another server ...\n");
       continue;
     }
+    else if(res == CURLE_COULDNT_CONNECT) {
+      printf("Couldn't connect to server. Trying another server ...\n");
+      continue;
+    }
     else if(res != CURLE_OK) {
       fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
       return 1;
